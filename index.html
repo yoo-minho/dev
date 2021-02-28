@@ -1,6 +1,253 @@
+<!DOCTYPE html>
 <html>
-    <head></head>
-    <body>
-        안녕222
-    </body>
+<head>
+    <title>iPhone X</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <style>
+        html {
+            height: 100%;
+            font-family: sans-serif;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
+
+        body {
+            height: 100%;
+            -webkit-font-smoothing: antialiased;
+            font-smoothing: antialiased;
+            -webkit-overflow-scrolling: touch;
+            overflow-scrolling: touch;
+        }
+
+        html, body, div, span, applet, object, iframe, figure, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code,
+        del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, dl, dt, dd, ol, ul, li, fieldset, form, label, legend,
+        table, caption, tbody, tfoot, thead, tr, th, td {
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+
+        article, aside, details, figcaption, figure, footer, header, hgroup, main, nav, section, summary {
+            display: block;
+        }
+
+        div, article, section, p, ul, li, span, label {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: black;
+        }
+
+        #cover-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .video-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #video {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body>
+<div class="video-wrapper">
+    <video muted="" playsinline="" autoplay="" loop="" id="video"
+           src="https://images.apple.com/media/us/iphone-x/2017/01df5b43-28e4-4848-bf20-490c34a926a7/overview/primary/hero/large_2x.mp4">
+    </video>
+</div>
+<canvas id="cover-canvas"></canvas>
+
+<script>
+
+    const Iphone = (function () {
+
+        var elemPhone,
+            windowWidth = 0, // 브라우저 폭
+            windowHeight = 0, // 브라우저 높이
+            scrollY = 0, // 현재 스크롤 위치
+            relativeScrollY = 0, // 각 키프레임에서 사용하는 상대적인 스크롤 위치
+            prevDurations = 0, // 이전 키프레임까지의 duration
+            totalScrollHeight = 0, // 스크롤을 할 수 있는 전체 높이(body의 높이로 세팅)
+            currentKeyframe = 0, // 현재 키프레임(0, 1)
+            phoneWidth = 1380, // 아이폰 이미지 기본 크기
+            phoneHeight = 3000, // 아이폰 이미지 기본 크기
+            pixelDuration = 0 // 키프레임 당 차지하는 스크롤 높이
+
+        const keyframes = [
+            {
+                animationValues: {
+                    videoScale: [1, 2],
+                    triangleMove: [0, 200],
+                    rectangleMove: [0, 500]
+                }
+            },
+            {
+                animationValues: {
+                    videoScale: [2, 0.5],
+                    triangleMove: [200, 1000],
+                    rectangleMove: [500, 500]
+                }
+            }
+        ]
+
+        const elemVideo = document.getElementById('video');
+        const elemCanvas = document.getElementById('cover-canvas');
+        const context = elemCanvas.getContext('2d');
+        let canvasWidth = window.innerWidth * 2; // 캔버스 폭(브라우저 폭에 맞춤)
+        let canvasHeight = window.innerHeight * 2; // 캔버스 높이(브라우저 높이에 맞춤)
+
+        return {
+            init: init,
+        }
+
+        function init() {
+
+            resizeHandler();
+            render();
+
+            window.addEventListener('resize', () => requestAnimationFrame(resizeHandler));
+            window.addEventListener('scroll', () => requestAnimationFrame(scrollHandler));
+
+            elemPhone = document.createElement('img');
+            elemPhone.src = 'phone.png';
+            elemPhone.addEventListener('load', drawCanvas);
+        }
+
+        function resizeHandler() {
+            windowWidth = window.innerWidth;
+            windowHeight = window.innerHeight;
+            pixelDuration = windowHeight * 0.5;
+            canvasWidth = windowWidth * 2;
+            canvasHeight = windowHeight * 2;
+            totalScrollHeight = pixelDuration * keyframes.length + windowHeight;
+
+            document.body.style.height = totalScrollHeight + 'px';
+            elemCanvas.width = canvasWidth;
+            elemCanvas.height = canvasHeight;
+            elemCanvas.style.width = windowWidth + 'px';
+            elemCanvas.style.height = windowHeight + 'px';
+        }
+
+        function scrollHandler() {
+            scrollY = window.pageYOffset;
+            if (scrollY < 0 || scrollY > (totalScrollHeight - windowHeight)) return
+            if (scrollY > pixelDuration + prevDurations) {
+                prevDurations += pixelDuration;
+                currentKeyframe++;
+            } else if (scrollY < prevDurations) {
+                currentKeyframe--;
+                prevDurations -= pixelDuration;
+            }
+            relativeScrollY = scrollY - prevDurations;
+            render();
+        }
+
+        function render() {
+            if (!keyframes[currentKeyframe]) return;
+            const calcAnimationValue = (values) => (relativeScrollY / pixelDuration) * (values[1] - values[0]) + values[0];
+            const keyframeAnimationValues = keyframes[currentKeyframe].animationValues;
+            const videoScale = calcAnimationValue(keyframeAnimationValues.videoScale);
+            const triangleMove = calcAnimationValue(keyframeAnimationValues.triangleMove);
+            const rectangleMove = calcAnimationValue(keyframeAnimationValues.rectangleMove);
+            elemVideo.style.transform = 'scale(' + videoScale + ')';
+            context.clearRect(0, 0, canvasWidth, canvasHeight);
+            if (elemPhone) {
+                drawCanvas(videoScale, triangleMove, rectangleMove);
+            }
+        }
+
+        function drawCanvas(videoScale, triangleMove, rectangleMove) {
+            videoScale = videoScale || 1;
+            triangleMove = triangleMove || 0;
+            rectangleMove = rectangleMove || 0;
+
+            context.save();
+            context.translate((canvasWidth - phoneWidth * videoScale) * 0.5, (canvasHeight - phoneHeight * videoScale) * 0.5);
+            context.drawImage(elemPhone, 0, 0, phoneWidth * videoScale, phoneHeight * videoScale);
+            context.restore();
+
+            context.fillStyle = 'black';
+
+            // 위 삼각형
+            context.beginPath();
+            context.moveTo(canvasWidth * 0.5 - 1500, -triangleMove - 1700);
+            context.lineTo(canvasWidth * 0.5, canvasHeight * 0.5 - 150 - triangleMove);
+            context.lineTo(canvasWidth * 0.5 + 1500, -triangleMove - 1700);
+            context.lineTo(canvasWidth * 0.5 - 1500, -triangleMove - 1700);
+            context.fill();
+            context.closePath();
+
+            // 아래 삼각형
+            context.beginPath();
+            context.moveTo(canvasWidth * 0.5 - 1500, canvasHeight + triangleMove + 1700);
+            context.lineTo(canvasWidth * 0.5, canvasHeight * 0.5 + 150 + triangleMove);
+            context.lineTo(canvasWidth * 0.5 + 1500, canvasHeight + triangleMove + 1700);
+            context.lineTo(canvasWidth * 0.5 - 1500, canvasHeight + triangleMove + 1700);
+            context.fill();
+            context.closePath();
+
+            // 왼쪽 삼각형
+            context.beginPath();
+            context.moveTo(canvasWidth * 0.5 - 1700 - triangleMove, -1700);
+            context.lineTo(canvasWidth * 0.5 - 130 - triangleMove, canvasHeight * 0.5);
+            context.lineTo(canvasWidth * 0.5 - 1700 - triangleMove, canvasHeight + 1700);
+            context.lineTo(canvasWidth * 0.5 - 1700 - triangleMove, -1700);
+            context.fill();
+            context.closePath();
+
+            // 오른쪽 삼각형
+            context.beginPath();
+            context.moveTo(canvasWidth * 0.5 + 1700 + triangleMove, -1700);
+            context.lineTo(canvasWidth * 0.5 + 130 + triangleMove, canvasHeight * 0.5);
+            context.lineTo(canvasWidth * 0.5 + 1700 + triangleMove, canvasHeight + 1700);
+            context.lineTo(canvasWidth * 0.5 + 1700 + triangleMove, -1700);
+            context.fill();
+            context.closePath();
+
+            // 박스 상, 하
+            context.fillRect(0, canvasHeight * 0.5 - 2600 - rectangleMove, canvasWidth, 2000);
+            context.fillRect(0, canvasHeight * 0.5 + 600 + rectangleMove, canvasWidth, 2000);
+        }
+    })()
+
+    Iphone.init();
+</script>
+</body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
